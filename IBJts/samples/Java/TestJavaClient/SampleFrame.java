@@ -3,6 +3,8 @@
 
 package TestJavaClient;
 
+import java.util.Timer;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -26,11 +28,13 @@ import javax.swing.*;
 
 import com.ib.client.*;
 
+
+
 class SampleFrame extends JFrame implements EWrapper {
     private static final int NOT_AN_FA_ACCOUNT_ERROR = 321 ;
     private int faErrorCodes[] = { 503, 504, 505, 522, 1100, NOT_AN_FA_ACCOUNT_ERROR } ;
     private boolean faError ;
-    private boolean isMonitoring;
+    private Timer m_Timer;
 
     private EJavaSignal m_signal = new EJavaSignal();
     private EClientSocket   m_client = new EClientSocket( this, m_signal);
@@ -375,15 +379,22 @@ class SampleFrame extends JFrame implements EWrapper {
   }
     
     private void onStartMonitorTransaction() {
-    	m_TWS.add("start monitoring the order");
-    	isMonitoring = true;
+
+    	if (m_Timer == null) {
+        	m_TWS.add("start monitoring the order");
+    		m_Timer = new Timer();
+    		m_Timer.schedule(new AutomateTradeTask(), 0, 5 * 1000);
+    	} else {
+        	m_TWS.add("monitoring task is running");
+    	}
+    	
 //    	while(isMonitoring) {}
     	//this.i = 
     }
     
     private void onStopMonitorTransaction() {
-    
-    	isMonitoring = false;
+    	m_Timer.cancel();
+    	m_Timer = null;
     	m_TWS.add("stop monitoring the order");
     }
     
