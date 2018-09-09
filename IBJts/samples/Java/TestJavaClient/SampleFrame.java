@@ -30,6 +30,7 @@ class SampleFrame extends JFrame implements EWrapper {
     private static final int NOT_AN_FA_ACCOUNT_ERROR = 321 ;
     private int faErrorCodes[] = { 503, 504, 505, 522, 1100, NOT_AN_FA_ACCOUNT_ERROR } ;
     private boolean faError ;
+    private boolean isMonitoring;
 
     private EJavaSignal m_signal = new EJavaSignal();
     private EClientSocket   m_client = new EClientSocket( this, m_signal);
@@ -257,6 +258,12 @@ class SampleFrame extends JFrame implements EWrapper {
         butReqTickByTickData.addActionListener(e -> onReqTickByTickData());
         JButton butCancelTickByTickData = new JButton("Cancel Tick-By-Tick");
         butCancelTickByTickData.addActionListener(e -> onCancelTickByTickData());
+        
+        JButton butStartMonitorTransaction = new JButton("开始监听交易状态");
+        butStartMonitorTransaction.addActionListener(e -> onStartMonitorTransaction());
+        
+        JButton butStopMonitorTransaction = new JButton("停止监听交易状态");
+        butStopMonitorTransaction.addActionListener(e -> onStopMonitorTransaction());
 
         JButton butClear = new JButton( "Clear");
         butClear.addActionListener(e -> onClear());
@@ -323,6 +330,9 @@ class SampleFrame extends JFrame implements EWrapper {
 
         buttonPanel.add( new JPanel() );
         pairSlot.add(butClear, butClose);
+        
+        buttonPanel.add( new JPanel() );
+        pairSlot.add(butStartMonitorTransaction, butStopMonitorTransaction);
 
         return buttonPanel;
     }
@@ -363,6 +373,20 @@ class SampleFrame extends JFrame implements EWrapper {
             m_client.cancelTickByTickData(m_orderDlg.id());
         }
   }
+    
+    private void onStartMonitorTransaction() {
+    	m_TWS.add("start monitoring the order");
+    	isMonitoring = true;
+//    	while(isMonitoring) {}
+    	//this.i = 
+    }
+    
+    private void onStopMonitorTransaction() {
+    
+    	isMonitoring = false;
+    	m_TWS.add("stop monitoring the order");
+    }
+    
     
     private void onReqHistoricalTicks() {
         m_orderDlg.init("Misc Options", true);

@@ -8,10 +8,13 @@ import java.awt.Component;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+
+
 public class Main {
 
     // This method is called to start the application
     public static void main (String args[]) {
+//    	System.getProperty("java.classpath");
         SampleFrame sampleFrame = new SampleFrame();
         sampleFrame.setVisible(true);
     }
