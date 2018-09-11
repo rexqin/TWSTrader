@@ -17,8 +17,8 @@ import javax.swing.JTextField;
 class ConnectDlg extends JDialog {
     private static int LAST_CLIENT_ID = 0;
 
-    private JTextField 	m_ipAddress = new JTextField();
-    private JTextField 	m_port = new JTextField( "7496");
+    private JTextField 	m_ipAddress = new JTextField("127.0.0.1");
+    private JTextField 	m_port = new JTextField( "4002");
     private JTextField 	m_clientId = new JTextField();
     private JTextField  m_optCapts = new JTextField();
     JButton 	m_ok = new JButton( "OK");

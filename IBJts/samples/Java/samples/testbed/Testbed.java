@@ -67,12 +67,12 @@ public class Testbed {
 		//marketDepthOperations(wrapper.getClient());
 		//rerouteCFDOperations(wrapper.getClient());
 		//marketRuleOperations(wrapper.getClient());
-		//tickDataOperations(wrapper.getClient());
+		tickDataOperations(wrapper.getClient());
 		//pnlSingle(wrapper.getClient());
 		//continuousFuturesOperations(wrapper.getClient());
 		//pnlSingle(wrapper.getClient());
 		//histogram(wrapper.getClient());
-		whatIfSamples(wrapper.getClient(), wrapper.getCurrentOrderId());
+		//whatIfSamples(wrapper.getClient(), wrapper.getCurrentOrderId());
 
 		Thread.sleep(100000);
 		m_client.eDisconnect();
