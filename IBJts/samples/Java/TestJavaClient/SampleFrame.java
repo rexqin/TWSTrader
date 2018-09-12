@@ -1209,13 +1209,14 @@ class SampleFrame extends JFrame implements EWrapper {
 			        order.lmtPrice(Math.abs(price));
 			        
 			        if (m_lastOrderId != m_currentOrderId) {
+			        	m_lastOrderId = m_currentOrderId;
 			        	m_client.placeOrder(m_currentOrderId, contract, order);
-						m_lastOrderId = m_currentOrderId;
+						
 			        }
 					
 					//ping cang
 				
-				} else if (profit > 1.3) {
+				} else if (profit > 1.5) {
 					
 					m_tickers.add("symbol="+contract.symbol()
 								+" type=" + contract.secType()
@@ -1225,12 +1226,13 @@ class SampleFrame extends JFrame implements EWrapper {
 					Order order = new Order();
 			        order.action("SELL");
 			        order.orderType("LMT");
-			        order.totalQuantity(Math.abs(pos*2));
+			        order.totalQuantity(Math.abs(1));
 			        order.lmtPrice(Math.abs(price));
 			        
 			        if (m_lastOrderId != m_currentOrderId) {
+			        	m_lastOrderId = m_currentOrderId;
 			        	m_client.placeOrder(m_currentOrderId, contract, order);
-						m_lastOrderId = m_currentOrderId;
+						
 			        }
 				}
 			} else {
@@ -1336,9 +1338,9 @@ class SampleFrame extends JFrame implements EWrapper {
 	public void openOrder(int orderId, Contract contract, Order order, OrderState orderState) {
 		// received open order
 		
-		if (orderState.status().isActive()) {
-			m_orderList.put(orderId,contract);
-		} else {
+		m_orderList.put(orderId,contract);
+		
+		if (!orderState.status().isActive()) {
 			m_client.cancelOrder(orderId);
 		}
 
