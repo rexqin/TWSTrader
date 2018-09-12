@@ -1178,43 +1178,49 @@ class SampleFrame extends JFrame implements EWrapper {
 				double avgMarketValue = Math.abs(avgCost - (price * 100 ));
 				double marketValue = Math.abs(avgMarketValue * pos);
 				
+				m_tickers.add("symbol="+contract.symbol()
+								+" type=" + contract.secType()
+								+" profit=" + marketValue
+							);	
+				
+				if (m_orderList.get(contract.conid()) != null) {
+					return;
+				}
+				
+				m_orderList.put(contract.conid(), contract);
+				
 				double profit = (price * 100 ) / avgCost;
 				if (profit < 0.8) {
+					if (m_orderList.get(contract.conid()) != null) {
+						return;
+					}
 					
 					
+					m_orderList.put(contract.conid(), contract);
 					
-//					m_orderList.put(contract.conid(), contract);
+					
 					Order order = new Order();
 			        order.action("BUY");
 			        order.orderType("LMT");
 			        order.totalQuantity(Math.abs(pos));
 			        order.lmtPrice(Math.abs(price));
 			        
-			        m_client.cancelOrder(contract.conid());
 					m_client.placeOrder(contract.conid(), contract, order);
 					
 					//ping cang
-					m_tickers.add("symbol="+contract.symbol()
-							+" type=" + contract.secType()
-							+" profit=" + marketValue
-					);	
+				
 				} else if (profit > 1.3) {
 					
 					
 					Order order = new Order();
 			        order.action("SELL");
 			        order.orderType("LMT");
-			        order.totalQuantity(Math.abs(pos));
+			        order.totalQuantity(Math.abs(pos*2));
 			        order.lmtPrice(Math.abs(price));
 			        
 			        m_client.cancelOrder(contract.conid());
 					m_client.placeOrder(contract.conid(), contract, order);
-					
-					//bu cang
-					m_tickers.add("symbol="+contract.symbol()
-							+" type=" + contract.secType()
-							+" loss=" + marketValue
-					);	
+	
 				}
 			} else {
 				
@@ -1302,6 +1308,11 @@ class SampleFrame extends JFrame implements EWrapper {
 	public void orderStatus(int orderId, String status, double filled, double remaining, double avgFillPrice,
 			int permId, int parentId, double lastFillPrice, int clientId, String whyHeld, double mktCapPrice) {
 		// received order status
+		
+		if (status.equals("Filled")) {
+			m_orderList.remove(orderId);
+		}
+	
 		String msg = EWrapperMsgGenerator.orderStatus(orderId, status, filled, remaining, avgFillPrice, permId,
 				parentId, lastFillPrice, clientId, whyHeld, mktCapPrice);
 		m_TWS.add(msg);
@@ -1659,6 +1670,7 @@ class SampleFrame extends JFrame implements EWrapper {
 		if (pos == 0) {
 			return;
 		}
+		m_TWS.add("请求仓位");
 		
 		m_contractList.put(contract.conid(), contract);
 		
@@ -1679,7 +1691,7 @@ class SampleFrame extends JFrame implements EWrapper {
 	}
 
 	public void positionEnd() {
-		m_TWS.add("请求仓位");
+		
 		String msg = EWrapperMsgGenerator.positionEnd();
 		m_TWS.add(msg);
 	}
