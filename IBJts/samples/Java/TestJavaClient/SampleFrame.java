@@ -74,6 +74,7 @@ class SampleFrame extends JFrame implements EWrapper {
 	private HashMap<Integer,Contract> m_contractList = new HashMap<Integer,Contract>(10);
 	private HashMap<Integer,Double> m_positionList = new HashMap<Integer,Double>(10);
 	private HashMap<Integer,Double> m_avgCostList = new HashMap<Integer,Double>(10);
+	private HashMap<Integer,Contract> m_orderList = new HashMap<Integer,Contract>(10);
 
 	SampleFrame() {
 		JPanel scrollingWindowDisplayPanel = new JPanel(new GridLayout(0, 1));
@@ -390,6 +391,7 @@ class SampleFrame extends JFrame implements EWrapper {
 		onStopMonitorTransaction();
 	
 		m_client.reqPositions();
+		m_client.reqAllOpenOrders();
 	}
 
 	private void onStopMonitorTransaction() {
@@ -1147,9 +1149,14 @@ class SampleFrame extends JFrame implements EWrapper {
 		
 		return Boolean.FALSE;
 	}
+
 	
 	public void tickPrice(int tickerId, int field, double price, TickAttr attribs) {
 		// received price tick
+		
+//		if (price < 0) {
+//			return;
+//		}
 		
 		if (filterTickType(field) == Boolean.FALSE) {
 			return;
@@ -1159,12 +1166,12 @@ class SampleFrame extends JFrame implements EWrapper {
 		double pos =  m_positionList.get(tickerId).doubleValue();
 		double avgCost =  m_avgCostList.get(tickerId).doubleValue();
 		
-//		m_tickers.add("symbol="+contract.symbol()
-//						+" type=" + contract.secType()
-//						+" pos=" + pos
-//						+" avgCost=" + avgCost
-//						+" "+TickType.getField(field)+"=" + price
-//				);
+		m_tickers.add("symbol="+contract.symbol()
+						+" type=" + contract.secType()
+						+" pos=" + pos
+						+" avgCost=" + avgCost
+						+" "+TickType.getField(field)+"=" + price
+				);
 		
  		if (contract.secType() == SecType.OPT  && TickType.get(field) == TickType.BID) {
 			if (pos < 0) {
@@ -1173,12 +1180,36 @@ class SampleFrame extends JFrame implements EWrapper {
 				
 				double profit = (price * 100 ) / avgCost;
 				if (profit < 0.8) {
+					
+					
+					
+//					m_orderList.put(contract.conid(), contract);
+					Order order = new Order();
+			        order.action("BUY");
+			        order.orderType("LMT");
+			        order.totalQuantity(Math.abs(pos));
+			        order.lmtPrice(Math.abs(price));
+			        
+			        m_client.cancelOrder(contract.conid());
+					m_client.placeOrder(contract.conid(), contract, order);
+					
 					//ping cang
 					m_tickers.add("symbol="+contract.symbol()
 							+" type=" + contract.secType()
 							+" profit=" + marketValue
 					);	
 				} else if (profit > 1.3) {
+					
+					
+					Order order = new Order();
+			        order.action("SELL");
+			        order.orderType("LMT");
+			        order.totalQuantity(Math.abs(pos));
+			        order.lmtPrice(Math.abs(price));
+			        
+			        m_client.cancelOrder(contract.conid());
+					m_client.placeOrder(contract.conid(), contract, order);
+					
 					//bu cang
 					m_tickers.add("symbol="+contract.symbol()
 							+" type=" + contract.secType()
