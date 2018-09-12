@@ -71,6 +71,9 @@ class SampleFrame extends JFrame implements EWrapper {
 	boolean m_bIsFAAccount = false;
 	private int m_currentOrderId = 0;
 	private int m_lastOrderId = 0;
+	private double m_netLiquidation = 0.0;
+	private double m_buyingPower = 0.0;
+	
 
 	private boolean m_disconnectInProgress = false;
 	private HashMap<Integer,Contract> m_contractList = new HashMap<Integer,Contract>(10);
@@ -394,6 +397,7 @@ class SampleFrame extends JFrame implements EWrapper {
 	
 		m_client.reqPositions();
 		m_client.reqAllOpenOrders();
+		m_client.reqAccountSummary(9001, "All", "NetLiquidation,BuyingPower");
 	}
 
 	private void onStopMonitorTransaction() {
@@ -1187,6 +1191,10 @@ class SampleFrame extends JFrame implements EWrapper {
 				}
 				
 				
+				if (m_netLiquidation == 0.0 || m_buyingPower == 0.0 || (m_buyingPower/m_netLiquidation) < 0.1) {
+					return;
+				}
+				
 				
 				double profit = (price * 100 ) / avgCost;
 				if (profit < 0.2) {
@@ -1319,6 +1327,10 @@ class SampleFrame extends JFrame implements EWrapper {
 		if (OrderStatus.get(status) == OrderStatus.Filled) {
 			m_orderList.remove(orderId);
 			m_currentOrderId++;
+		} else if (!OrderStatus.get(status).isActive() ){
+			m_orderList.remove(orderId);
+			m_client.cancelOrder(orderId);
+			m_currentOrderId++;
 		}
 		
 		String msg = EWrapperMsgGenerator.orderStatus(orderId, status, filled, remaining, avgFillPrice, permId,
@@ -1334,11 +1346,10 @@ class SampleFrame extends JFrame implements EWrapper {
 		
 		m_orderList.put(orderId,contract);
 		
-		if (!orderState.status().isActive()) {
-			m_orderList.remove(orderId);
-			m_client.cancelOrder(orderId);
-			m_currentOrderId++;
-		}
+//		if (!orderState.status().isActive()) {
+//			
+//			
+//		}
 
 		String msg = EWrapperMsgGenerator.openOrder(orderId, contract, order, orderState);
 		m_TWS.add(msg);
@@ -1717,6 +1728,15 @@ class SampleFrame extends JFrame implements EWrapper {
 	}
 
 	public void accountSummary(int reqId, String account, String tag, String value, String currency) {
+		
+		if (tag.equals("NetLiquidation")) {
+			m_netLiquidation= Double.parseDouble(value);
+		}
+		
+		if (tag.equals("BuyingPower")) {
+			m_buyingPower = Double.parseDouble(value);
+		}
+		
 		String msg = EWrapperMsgGenerator.accountSummary(reqId, account, tag, value, currency);
 		m_TWS.add(msg);
 	}
