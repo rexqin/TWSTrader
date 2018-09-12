@@ -1154,9 +1154,9 @@ class SampleFrame extends JFrame implements EWrapper {
 	public void tickPrice(int tickerId, int field, double price, TickAttr attribs) {
 		// received price tick
 		
-//		if (price < 0) {
-//			return;
-//		}
+		if (price < 0) {
+			return;
+		}
 		
 		if (filterTickType(field) == Boolean.FALSE) {
 			return;
@@ -1665,8 +1665,14 @@ class SampleFrame extends JFrame implements EWrapper {
 		m_positionList.put(contract.conid(), pos);
 		m_avgCostList.put(contract.conid(), avgCost);
 		
-		contract.exchange("SMART");
-		contract.primaryExch("ISLAND");
+		
+		if (contract.currency().equals("USD")) {
+			contract.exchange("SMART");
+			contract.primaryExch("ISLAND");	
+		} else if (contract.currency().equals("HKD")) {
+			contract.exchange("SEHK");
+		}
+		
 		m_client.cancelMktData(contract.conid());
 		m_client.reqMktData(contract.conid(), contract,  "", false, false, null);
 		m_TWS.add("conid="+contract.conid()+" symbol="+contract.symbol() + " type=" + contract.secType() + " pos="+pos+" avgCost="+avgCost);
