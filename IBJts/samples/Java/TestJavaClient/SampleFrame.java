@@ -69,6 +69,8 @@ class SampleFrame extends JFrame implements EWrapper {
 	private String faAliasesXML;
 	String m_FAAcctCodes;
 	boolean m_bIsFAAccount = false;
+	private int m_currentOrderId = 0;
+	private int m_lastOrderId = 0;
 
 	private boolean m_disconnectInProgress = false;
 	private HashMap<Integer,Contract> m_contractList = new HashMap<Integer,Contract>(10);
@@ -1166,35 +1168,36 @@ class SampleFrame extends JFrame implements EWrapper {
 		double pos =  m_positionList.get(tickerId).doubleValue();
 		double avgCost =  m_avgCostList.get(tickerId).doubleValue();
 		
-		m_tickers.add("symbol="+contract.symbol()
-						+" type=" + contract.secType()
-						+" pos=" + pos
-						+" avgCost=" + avgCost
-						+" "+TickType.getField(field)+"=" + price
-				);
+//		m_tickers.add("symbol="+contract.symbol()
+//						+" type=" + contract.secType()
+//						+" pos=" + pos
+//						+" avgCost=" + avgCost
+//						+" "+TickType.getField(field)+"=" + price
+//				);
 		
  		if (contract.secType() == SecType.OPT  && TickType.get(field) == TickType.BID) {
 			if (pos < 0) {
 				double avgMarketValue = Math.abs(avgCost - (price * 100 ));
 				double marketValue = Math.abs(avgMarketValue * pos);
 				
-				m_tickers.add("symbol="+contract.symbol()
-								+" type=" + contract.secType()
-								+" profit=" + marketValue
-							);	
+				
 				
 				if (m_orderList.get(contract.conid()) != null) {
 					return;
 				}
 				
-				m_orderList.put(contract.conid(), contract);
+				
 				
 				double profit = (price * 100 ) / avgCost;
-				if (profit < 0.8) {
+				if (profit < 0.2) {
 					if (m_orderList.get(contract.conid()) != null) {
 						return;
 					}
 					
+					m_tickers.add("symbol="+contract.symbol()
+						+" type=" + contract.secType()
+						+" profit=" + marketValue
+					);
 					
 					m_orderList.put(contract.conid(), contract);
 					
@@ -1205,12 +1208,19 @@ class SampleFrame extends JFrame implements EWrapper {
 			        order.totalQuantity(Math.abs(pos));
 			        order.lmtPrice(Math.abs(price));
 			        
-					m_client.placeOrder(contract.conid(), contract, order);
+			        if (m_lastOrderId != m_currentOrderId) {
+			        	m_client.placeOrder(m_currentOrderId, contract, order);
+						m_lastOrderId = m_currentOrderId;
+			        }
 					
 					//ping cang
 				
 				} else if (profit > 1.3) {
 					
+					m_tickers.add("symbol="+contract.symbol()
+								+" type=" + contract.secType()
+								+" loss=" + marketValue
+							);
 					
 					Order order = new Order();
 			        order.action("SELL");
@@ -1218,9 +1228,10 @@ class SampleFrame extends JFrame implements EWrapper {
 			        order.totalQuantity(Math.abs(pos*2));
 			        order.lmtPrice(Math.abs(price));
 			        
-			        m_client.cancelOrder(contract.conid());
-					m_client.placeOrder(contract.conid(), contract, order);
-	
+			        if (m_lastOrderId != m_currentOrderId) {
+			        	m_client.placeOrder(m_currentOrderId, contract, order);
+						m_lastOrderId = m_currentOrderId;
+			        }
 				}
 			} else {
 				
@@ -1308,23 +1319,32 @@ class SampleFrame extends JFrame implements EWrapper {
 	public void orderStatus(int orderId, String status, double filled, double remaining, double avgFillPrice,
 			int permId, int parentId, double lastFillPrice, int clientId, String whyHeld, double mktCapPrice) {
 		// received order status
-		
-		if (status.equals("Filled")) {
+
+		if (OrderStatus.get(status) == OrderStatus.Filled) {
 			m_orderList.remove(orderId);
+			m_client.cancelOrder(orderId);
 		}
-	
+		
 		String msg = EWrapperMsgGenerator.orderStatus(orderId, status, filled, remaining, avgFillPrice, permId,
 				parentId, lastFillPrice, clientId, whyHeld, mktCapPrice);
 		m_TWS.add(msg);
 
 		// make sure id for next order is at least orderId+1
-		m_orderDlg.setIdAtLeast(orderId + 1);
+		//m_orderDlg.setIdAtLeast(orderId + 1);
 	}
 
 	public void openOrder(int orderId, Contract contract, Order order, OrderState orderState) {
 		// received open order
+		
+		if (orderState.status().isActive()) {
+			m_orderList.put(orderId,contract);
+		} else {
+			m_client.cancelOrder(orderId);
+		}
+
 		String msg = EWrapperMsgGenerator.openOrder(orderId, contract, order, orderState);
 		m_TWS.add(msg);
+		m_currentOrderId++;
 	}
 
 	public void openOrderEnd() {
@@ -1411,7 +1431,9 @@ class SampleFrame extends JFrame implements EWrapper {
 		// received next valid order id
 		String msg = EWrapperMsgGenerator.nextValidId(orderId);
 		m_TWS.add(msg);
-		m_orderDlg.setIdAtLeast(orderId);
+		
+		m_currentOrderId = orderId++;
+		
 	}
 
 	public void error(Exception ex) {
