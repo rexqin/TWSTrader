@@ -1182,7 +1182,7 @@ class SampleFrame extends JFrame implements EWrapper {
 				
 				
 				
-				if (m_orderList.get(contract.conid()) != null) {
+				if (m_orderList.get(m_currentOrderId) != null) {
 					return;
 				}
 				
@@ -1190,17 +1190,11 @@ class SampleFrame extends JFrame implements EWrapper {
 				
 				double profit = (price * 100 ) / avgCost;
 				if (profit < 0.2) {
-					if (m_orderList.get(contract.conid()) != null) {
-						return;
-					}
 					
 					m_tickers.add("symbol="+contract.symbol()
 						+" type=" + contract.secType()
 						+" profit=" + marketValue
 					);
-					
-					m_orderList.put(contract.conid(), contract);
-					
 					
 					Order order = new Order();
 			        order.action("BUY");
@@ -1324,7 +1318,7 @@ class SampleFrame extends JFrame implements EWrapper {
 
 		if (OrderStatus.get(status) == OrderStatus.Filled) {
 			m_orderList.remove(orderId);
-			m_client.cancelOrder(orderId);
+			m_currentOrderId++;
 		}
 		
 		String msg = EWrapperMsgGenerator.orderStatus(orderId, status, filled, remaining, avgFillPrice, permId,
@@ -1341,12 +1335,14 @@ class SampleFrame extends JFrame implements EWrapper {
 		m_orderList.put(orderId,contract);
 		
 		if (!orderState.status().isActive()) {
+			m_orderList.remove(orderId);
 			m_client.cancelOrder(orderId);
+			m_currentOrderId++;
 		}
 
 		String msg = EWrapperMsgGenerator.openOrder(orderId, contract, order, orderState);
 		m_TWS.add(msg);
-		m_currentOrderId++;
+		
 	}
 
 	public void openOrderEnd() {
