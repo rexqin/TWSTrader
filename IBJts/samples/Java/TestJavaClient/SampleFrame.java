@@ -3,14 +3,10 @@
 
 package TestJavaClient;
 
-import java.util.Timer;
-
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,12 +18,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Timer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.WindowConstants;
 
-import com.ib.client.*;
+import com.ib.client.Bar;
+import com.ib.client.CommissionReport;
+import com.ib.client.Contract;
+import com.ib.client.ContractDescription;
+import com.ib.client.ContractDetails;
+import com.ib.client.DeltaNeutralContract;
+import com.ib.client.DepthMktDataDescription;
+import com.ib.client.EClientSocket;
+import com.ib.client.EJavaSignal;
+import com.ib.client.EReader;
+import com.ib.client.EWrapper;
+import com.ib.client.EWrapperMsgGenerator;
+import com.ib.client.Execution;
+import com.ib.client.FamilyCode;
+import com.ib.client.HistogramEntry;
+import com.ib.client.HistoricalTick;
+import com.ib.client.HistoricalTickBidAsk;
+import com.ib.client.HistoricalTickLast;
+import com.ib.client.MarketDataType;
+import com.ib.client.NewsProvider;
+import com.ib.client.Order;
+import com.ib.client.OrderState;
+import com.ib.client.OrderStatus;
+import com.ib.client.PriceIncrement;
+import com.ib.client.SoftDollarTier;
+import com.ib.client.TagValue;
+import com.ib.client.TickAttr;
+import com.ib.client.TickType;
 import com.ib.client.Types.SecType;
 
 class SampleFrame extends JFrame implements EWrapper {
@@ -1171,71 +1199,35 @@ class SampleFrame extends JFrame implements EWrapper {
 		Contract contract = m_contractList.get(tickerId);
 		double pos =  m_positionList.get(tickerId).doubleValue();
 		double avgCost =  m_avgCostList.get(tickerId).doubleValue();
-		
-//		m_tickers.add("symbol="+contract.symbol()
-//						+" type=" + contract.secType()
-//						+" pos=" + pos
-//						+" avgCost=" + avgCost
-//						+" "+TickType.getField(field)+"=" + price
-//				);
+//		
+		m_tickers.add("symbol="+contract.symbol()
+						+" type=" + contract.secType()
+						+" pos=" + pos
+						+" avgCost=" + avgCost
+						+" "+TickType.getField(field)+"=" + price
+				);
 		
  		if (contract.secType() == SecType.OPT  && TickType.get(field) == TickType.BID) {
 			if (pos < 0) {
-				double avgMarketValue = Math.abs(avgCost - (price * 100 ));
+				
+				int multiper = Integer.parseInt(contract.multiplier());
+				double avgMarketValue = Math.abs(avgCost - (price * multiper ));
 				double marketValue = Math.abs(avgMarketValue * pos);
-				
-				
 				
 				if (m_orderList.get(m_currentOrderId) != null) {
 					return;
 				}
-				
-				
-				if (m_netLiquidation == 0.0 || m_buyingPower == 0.0 || (m_buyingPower/m_netLiquidation) < 0.1) {
-					return;
-				}
-				
-				
-				double profit = (price * 100 ) / avgCost;
+							
+				double profit = (price * multiper ) / avgCost;
 				if (profit < 0.2) {
 					
-					m_tickers.add("symbol="+contract.symbol()
-						+" type=" + contract.secType()
-						+" profit=" + marketValue
-					);
-					
-					Order order = new Order();
-			        order.action("BUY");
-			        order.orderType("LMT");
-			        order.totalQuantity(Math.abs(pos));
-			        order.lmtPrice(Math.abs(price));
-			        
-			        if (m_lastOrderId != m_currentOrderId) {
-			        	m_lastOrderId = m_currentOrderId;
-			        	m_client.placeOrder(m_currentOrderId, contract, order);
-						
-			        }
+					closePosition(price, contract, pos, marketValue);
 					
 					//ping cang
 				
 				} else if (profit > 1.5) {
 					
-					m_tickers.add("symbol="+contract.symbol()
-								+" type=" + contract.secType()
-								+" loss=" + marketValue
-							);
-					
-					Order order = new Order();
-			        order.action("SELL");
-			        order.orderType("LMT");
-			        order.totalQuantity(Math.abs(1));
-			        order.lmtPrice(Math.abs(price));
-			        
-			        if (m_lastOrderId != m_currentOrderId) {
-			        	m_lastOrderId = m_currentOrderId;
-			        	m_client.placeOrder(m_currentOrderId, contract, order);
-						
-			        }
+					addPosition(price, contract, 1, marketValue);
 				}
 			} else {
 				
@@ -1251,6 +1243,49 @@ class SampleFrame extends JFrame implements EWrapper {
 		
 		//Contract contract = m_contractList.get(tickerId);
 		//m_tickers.add("symbol="+contract.symbol()+' '+msg);
+	}
+
+	private void addPosition(double price, Contract contract, double pos, double marketValue) {
+		
+		if (m_netLiquidation == 0.0 || m_buyingPower == 0.0 || (m_buyingPower/m_netLiquidation) < 0.1) {
+			return;
+		}
+		
+		m_tickers.add("symbol="+contract.symbol()
+					+" type=" + contract.secType()
+					+" loss=" + marketValue
+				);
+		
+		Order order = new Order();
+		order.action("SELL");
+		order.orderType("LMT");
+		order.totalQuantity(Math.abs(pos));
+		order.lmtPrice(Math.abs(price));
+		
+		if (m_lastOrderId != m_currentOrderId) {
+			m_lastOrderId = m_currentOrderId;
+			m_client.placeOrder(m_currentOrderId, contract, order);
+			
+		}
+	}
+
+	private void closePosition(double price, Contract contract, double pos, double marketValue) {
+		m_tickers.add("symbol="+contract.symbol()
+			+" type=" + contract.secType()
+			+" profit=" + marketValue
+		);
+		
+		Order order = new Order();
+		order.action("BUY");
+		order.orderType("LMT");
+		order.totalQuantity(Math.abs(pos));
+		order.lmtPrice(Math.abs(price));
+		
+		if (m_lastOrderId != m_currentOrderId) {
+			m_lastOrderId = m_currentOrderId;
+			m_client.placeOrder(m_currentOrderId, contract, order);
+			
+		}
 	}
 
 	public void tickOptionComputation(int tickerId, int field, double impliedVol, double delta, double optPrice,
